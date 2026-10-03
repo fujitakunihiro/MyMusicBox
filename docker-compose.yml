@@ -1,0 +1,11 @@
+name: music-server
+
+services:
+  music-server:
+    build: .
+    container_name: local-music-server
+    restart: unless-stopped
+    ports:
+      - "${MUSIC_PORT:-8000}:8000"
+    volumes:
+      - "${MUSIC_ROOT:-./music}:/music:ro"

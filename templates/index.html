@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ root_name }} - Music Server</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #fbfaf8;
+      --panel: rgba(255, 255, 255, .9);
+      --panel-2: #fff8f3;
+      --line: #eee4dc;
+      --text: #3d302b;
+      --muted: #968680;
+      --accent: #c68a69;
+      --accent-strong: #9f624c;
+      --gold: #d5a553;
+      --danger: #bd5e5e;
+      --shadow: 0 14px 36px rgba(107, 73, 52, .10);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding-bottom: 132px;
+      background:
+        radial-gradient(circle at 5% 0%, rgba(246, 190, 186, .52), transparent 25rem),
+        radial-gradient(circle at 95% 12%, rgba(250, 220, 157, .52), transparent 25rem),
+        radial-gradient(circle at 70% 70%, rgba(218, 200, 245, .22), transparent 28rem),
+        var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    body::before {
+      position: fixed;
+      z-index: -1;
+      inset: 0;
+      pointer-events: none;
+      content: "";
+      opacity: .28;
+      background-image: radial-gradient(rgba(198, 138, 105, .18) .7px, transparent .7px);
+      background-size: 18px 18px;
+      mask-image: linear-gradient(to bottom, black, transparent 70%);
+    }
+    button { font: inherit; }
+    .page { width: min(100% - 28px, 980px); margin: 0 auto; }
+    header {
+      position: relative;
+      padding: 34px 0 18px;
+    }
+    header::before {
+      display: block;
+      margin-bottom: 10px;
+      color: #c58a55;
+      content: "✦  YOUR MUSIC COLLECTION  ✦";
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .22em;
+      text-align: center;
+    }
+    h1 {
+      margin: 0 0 18px;
+      color: transparent;
+      background: linear-gradient(110deg, #8f543e 10%, #d49a4d 48%, #a95d62 90%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(1.5rem, 4vw, 2.25rem);
+      font-weight: 600;
+      letter-spacing: .02em;
+      text-align: center;
+      text-shadow: 0 5px 18px rgba(183, 112, 80, .16);
+    }
+    .breadcrumbs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      align-items: center;
+      min-height: 42px;
+      padding: 5px 8px;
+      border: 1px solid rgba(213, 165, 83, .24);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, .48);
+      color: var(--muted);
+    }
+    .crumb {
+      border: 1px solid rgba(190, 137, 38, .42);
+      border-radius: 10px;
+      padding: 8px 10px;
+      color: #956317;
+      background: linear-gradient(135deg, rgba(255, 245, 190, .75), rgba(255, 255, 255, .65));
+      box-shadow: inset 0 1px rgba(255,255,255,.95), 0 2px 7px rgba(177, 123, 31, .10);
+      cursor: pointer;
+    }
+    .crumb:hover, .crumb:focus-visible { background: linear-gradient(135deg, #fff1a9, #e8b83f); }
+    .separator { color: #c8a27f; }
+    .status { min-height: 24px; color: var(--muted); font-size: .92rem; }
+    .status.error { color: var(--danger); }
+    .search-row {
+      display: flex;
+      gap: 8px;
+      margin: 10px 0 16px;
+      padding: 6px;
+      border: 1px solid rgba(213, 165, 83, .42);
+      border-radius: 17px;
+      background: linear-gradient(105deg, rgba(255,255,255,.9), rgba(255,248,231,.9));
+      box-shadow: 0 8px 22px rgba(168, 112, 61, .11), inset 0 1px rgba(255,255,255,.9);
+    }
+    .search-input {
+      min-width: 0;
+      flex: 1;
+      min-height: 44px;
+      padding: 9px 13px;
+      border: 0;
+      border-radius: 12px;
+      color: var(--text);
+      background: transparent;
+      font: inherit;
+    }
+    .search-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .clear-search {
+      min-width: 72px;
+      border-color: #d6a55b;
+      color: #fff;
+      background: linear-gradient(135deg, #d9a45e, #bd765b);
+      font-weight: 700;
+    }
+    .clear-search:hover, .clear-search:focus-visible { color: #fff; background: linear-gradient(135deg, #c98d4b, #a95e4a); }
+    .list {
+      overflow: hidden;
+      border: 1px solid rgba(213, 165, 83, .32);
+      border-radius: 20px;
+      background: var(--panel);
+      box-shadow: var(--shadow), 0 0 0 5px rgba(255,255,255,.35);
+    }
+    .item {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      width: 100%;
+      min-height: 62px;
+      padding: 12px 16px;
+      border: 0;
+      border-bottom: 1px solid rgba(238, 228, 220, .8);
+      color: var(--text);
+      background: transparent;
+      text-align: left;
+      cursor: pointer;
+    }
+    .item:last-child { border-bottom: 0; }
+    .item:hover, .item:focus-visible { background: linear-gradient(90deg, #fffaf6, #fff1e9); }
+    .icon {
+      display: grid;
+      width: 36px;
+      height: 36px;
+      place-items: center;
+      border-radius: 11px;
+      background: linear-gradient(145deg, #fff3e9, #f9e4ff);
+      box-shadow: inset 0 1px rgba(255,255,255,.95), 0 4px 10px rgba(170, 104, 81, .10);
+      text-align: center;
+      font-size: 1.15rem;
+    }
+    .item-main { min-width: 0; flex: 1; }
+    .item-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .item-type { margin-top: 3px; color: var(--muted); font-size: .78rem; text-transform: uppercase; }
+    .arrow { color: var(--accent); font-size: 1.3rem; }
+    .empty { padding: 30px 20px; color: var(--muted); text-align: center; }
+
+    .player {
+      position: fixed;
+      z-index: 10;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      border-top: 2px solid transparent;
+      border-image: linear-gradient(90deg, #dba261, #bf7180, #dba261) 1;
+      background: rgba(255, 255, 255, .96);
+      box-shadow: 0 -10px 30px rgba(107, 73, 52, .13);
+      backdrop-filter: blur(12px);
+    }
+    .player-inner { width: min(100% - 28px, 980px); margin: 0 auto; padding: 12px 0 14px; }
+    .now-playing { overflow: hidden; margin-bottom: 7px; color: var(--accent-strong); font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+    .now-playing::before { margin-right: 6px; color: var(--gold); content: "✦"; }
+    .progress { display: grid; grid-template-columns: 42px 1fr 42px; gap: 8px; align-items: center; color: var(--muted); font-size: .78rem; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); cursor: pointer; }
+    .controls { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+    .control {
+      position: relative;
+      overflow: hidden;
+      min-width: 42px;
+      min-height: 40px;
+      padding: 7px 10px;
+      border: 1px solid #b67a13;
+      border-radius: 11px;
+      color: #714900;
+      background: linear-gradient(135deg, #fff4a8 0%, #f4ca53 28%, #bc8018 63%, #ffe98b 100%);
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: inset 0 1px rgba(255,255,255,.95), inset 0 -2px rgba(128, 78, 0, .18), 0 5px 13px rgba(154, 101, 16, .22);
+      text-shadow: 0 1px rgba(255,255,255,.55);
+    }
+    .control::after {
+      position: absolute;
+      top: -60%;
+      left: -70%;
+      width: 28%;
+      height: 220%;
+      content: "";
+      transform: rotate(25deg);
+      background: rgba(255,255,255,.55);
+      transition: left .45s ease;
+      pointer-events: none;
+    }
+    .control:hover::after, .control:focus-visible::after { left: 135%; }
+    .control:hover, .control:focus-visible { border-color: #8f5a04; background: linear-gradient(135deg, #fff8c9 0%, #ffda63 30%, #d2931d 65%, #fff0a0 100%); }
+    .clear-search { color: #714900; }
+    .play { color: #704500; background: linear-gradient(135deg, #fff7bd 0%, #f0be39 30%, #a86c08 65%, #ffe68a 100%); border-color: #a86f0e; font-size: 1.1rem; }
+    .volume { display: flex; align-items: center; gap: 7px; margin-left: auto; width: min(180px, 36vw); }
+
+    /* Apple-inspired: calm neutrals, generous spacing, and one clear accent. */
+    body {
+      background: #f5f5f7;
+      color: #1d1d1f;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", sans-serif;
+      letter-spacing: -.01em;
+    }
+    body::before { display: none; }
+    header { padding: 42px 0 20px; }
+    header::before { display: none; }
+    h1 {
+      margin-bottom: 24px;
+      color: #1d1d1f;
+      background: none;
+      -webkit-background-clip: initial;
+      background-clip: initial;
+      font-family: inherit;
+      font-size: clamp(1.55rem, 4vw, 2.15rem);
+      font-weight: 650;
+      letter-spacing: -.035em;
+      text-align: left;
+      text-shadow: none;
+    }
+    .breadcrumbs {
+      min-height: 38px;
+      padding: 2px 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: #86868b;
+    }
+    .crumb {
+      border: 0;
+      border-radius: 8px;
+      color: #6e6e73;
+      background: transparent;
+      box-shadow: none;
+      font-size: .92rem;
+    }
+    .crumb:hover, .crumb:focus-visible { color: #0071e3; background: #e8e8ed; }
+    .separator { color: #aeaeb2; }
+    .status { color: #86868b; }
+    .search-row {
+      margin: 10px 0 20px;
+      padding: 4px 6px 4px 14px;
+      border: 1px solid rgba(210, 210, 215, .8);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, .72);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, .045), inset 0 1px rgba(255,255,255,.8);
+      backdrop-filter: blur(20px);
+    }
+    .search-input {
+      min-height: 42px;
+      padding: 9px 3px;
+      border: 0;
+      color: #1d1d1f;
+      background: transparent;
+      box-shadow: none;
+      outline: none;
+    }
+    .search-input::placeholder { color: #86868b; }
+    .search-input:focus { outline: none; }
+    .clear-search {
+      min-width: 64px;
+      border-color: transparent;
+      color: #0071e3;
+      background: transparent;
+      box-shadow: none;
+      text-shadow: none;
+    }
+    .clear-search:hover, .clear-search:focus-visible { color: #0066cc; background: #e8e8ed; }
+    .list {
+      border: 1px solid rgba(210, 210, 215, .85);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, .86);
+      box-shadow: 0 8px 26px rgba(0, 0, 0, .055);
+      backdrop-filter: blur(20px);
+    }
+    .item {
+      min-height: 66px;
+      padding: 13px 16px;
+      border-bottom-color: #e8e8ed;
+      color: #1d1d1f;
+    }
+    .item:hover, .item:focus-visible { background: #f5f5f7; }
+    .icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: #f2f2f7;
+      box-shadow: none;
+    }
+    .item-type { color: #86868b; }
+    .arrow { color: #86868b; }
+    .empty { color: #86868b; }
+    .player {
+      border-top: 1px solid rgba(210, 210, 215, .85);
+      border-image: none;
+      background: rgba(255, 255, 255, .82);
+      box-shadow: 0 -8px 28px rgba(0, 0, 0, .08);
+      backdrop-filter: saturate(180%) blur(22px);
+    }
+    .now-playing { color: #1d1d1f; font-weight: 600; }
+    .now-playing::before { color: #0071e3; }
+    input[type="range"] { accent-color: #0071e3; }
+    .control {
+      min-width: 40px;
+      min-height: 38px;
+      border: 1px solid #d2d2d7;
+      border-radius: 9px;
+      color: #1d1d1f;
+      background: rgba(255, 255, 255, .9);
+      box-shadow: 0 2px 7px rgba(0, 0, 0, .06);
+      text-shadow: none;
+    }
+    .control::after { display: none; }
+    .control:hover, .control:focus-visible { border-color: #b8b8bd; background: #f5f5f7; }
+    .play {
+      color: #fff;
+      background: #0071e3;
+      border-color: #0071e3;
+      box-shadow: 0 3px 9px rgba(0, 113, 227, .25);
+    }
+    .play:hover, .play:focus-visible { color: #fff; background: #0077ed; border-color: #0077ed; }
+    @media (max-width: 520px) {
+      body { padding-bottom: 154px; }
+      .page { width: min(100% - 20px, 980px); }
+      .player-inner { width: min(100% - 20px, 980px); }
+      .volume { width: 105px; }
+      .control { min-width: 40px; padding-inline: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header>
+      <h1>🎵 {{ root_name }}</h1>
+      <nav id="breadcrumbs" class="breadcrumbs" aria-label="パンくずリスト"></nav>
+      <form id="search-form" class="search-row" role="search">
+        <input id="search-input" class="search-input" type="search" placeholder="曲名・フォルダ名を検索" autocomplete="off">
+        <button id="clear-search" class="control clear-search" type="button">クリア</button>
+      </form>
+      <div id="status" class="status" role="status" aria-live="polite"></div>
+    </header>
+    <section id="search-results" class="list" aria-label="検索結果" hidden></section>
+    <section id="file-list" class="list" aria-label="ファイル一覧"></section>
+  </main>
+
+  <section class="player" aria-label="音楽プレイヤー">
+    <div class="player-inner">
+      <div id="now-playing" class="now-playing">再生する曲を選択してください</div>
+      <div class="progress">
+        <span id="current-time">0:00</span>
+        <input id="seek" type="range" min="0" max="0" value="0" step="0.1" aria-label="再生位置">
+        <span id="duration">0:00</span>
+      </div>
+      <div class="controls">
+        <button id="previous" class="control" type="button" aria-label="前の曲">⏮</button>
+        <button id="play-pause" class="control play" type="button" aria-label="再生">▶</button>
+        <button id="next" class="control" type="button" aria-label="次の曲">⏭</button>
+        <label class="volume" title="音量">🔊 <input id="volume" type="range" min="0" max="1" value="1" step="0.01" aria-label="音量"></label>
+      </div>
+    </div>
+  </section>
+
+  <audio id="audio" preload="metadata"></audio>
+  <script>
+    (() => {
+      const audio = document.querySelector('#audio');
+      const list = document.querySelector('#file-list');
+      const searchResults = document.querySelector('#search-results');
+      const searchInput = document.querySelector('#search-input');
+      const breadcrumbs = document.querySelector('#breadcrumbs');
+      const status = document.querySelector('#status');
+      const nowPlaying = document.querySelector('#now-playing');
+      const seek = document.querySelector('#seek');
+      const volume = document.querySelector('#volume');
+      const currentTime = document.querySelector('#current-time');
+      const duration = document.querySelector('#duration');
+      const playPause = document.querySelector('#play-pause');
+      let currentPath = '';
+      let tracks = [];
+      let currentIndex = -1;
+      let searchTimer;
+      const rootName = {{ root_name|tojson }};
+
+      const formatTime = (seconds) => {
+        if (!Number.isFinite(seconds)) return '0:00';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
+        return `${mins}:${secs}`;
+      };
+
+      const mediaUrl = (path) => '/media/' + path.split('/').map(encodeURIComponent).join('/');
+
+      function showStatus(message = '', isError = false) {
+        status.textContent = message;
+        status.classList.toggle('error', isError);
+      }
+
+      function renderBreadcrumbs(path) {
+        breadcrumbs.replaceChildren();
+        const parts = path ? path.split('/') : [];
+        const add = (label, target, last = false) => {
+          if (breadcrumbs.childElementCount) {
+            const separator = document.createElement('span');
+            separator.className = 'separator';
+            separator.textContent = '›';
+            breadcrumbs.append(separator);
+          }
+          const button = document.createElement('button');
+          button.className = 'crumb';
+          button.type = 'button';
+          button.textContent = label;
+          button.disabled = last;
+          button.addEventListener('click', () => loadFolder(target));
+          breadcrumbs.append(button);
+        };
+        add(rootName, '');
+        let accumulated = '';
+        parts.forEach((part, index) => {
+          accumulated = accumulated ? `${accumulated}/${part}` : part;
+          add(part, accumulated, index === parts.length - 1);
+        });
+      }
+
+      function makeItem(icon, name, type, handler, arrow = '') {
+        const button = document.createElement('button');
+        button.className = 'item';
+        button.type = 'button';
+        button.addEventListener('click', handler);
+        const iconElement = document.createElement('span');
+        iconElement.className = 'icon';
+        iconElement.textContent = icon;
+        const main = document.createElement('span');
+        main.className = 'item-main';
+        const nameElement = document.createElement('span');
+        nameElement.className = 'item-name';
+        nameElement.textContent = name;
+        const typeElement = document.createElement('span');
+        typeElement.className = 'item-type';
+        typeElement.textContent = type;
+        main.append(nameElement, typeElement);
+        button.append(iconElement, main);
+        if (arrow) {
+          const arrowElement = document.createElement('span');
+          arrowElement.className = 'arrow';
+          arrowElement.textContent = arrow;
+          button.append(arrowElement);
+        }
+        return button;
+      }
+
+      function renderSearchResults(results) {
+        searchResults.replaceChildren();
+        searchResults.hidden = false;
+        list.hidden = true;
+        if (!results.length) {
+          const empty = document.createElement('div');
+          empty.className = 'empty';
+          empty.textContent = '一致する曲が見つかりません。';
+          searchResults.append(empty);
+          return;
+        }
+        results.forEach((result) => {
+          const parentPath = result.path.includes('/') ? result.path.split('/').slice(0, -1).join('/') : '';
+          const folderLabel = parentPath || 'ルート';
+          searchResults.append(makeItem('🎵', result.name, folderLabel, async () => {
+            searchInput.value = '';
+            searchResults.hidden = true;
+            list.hidden = false;
+            await loadFolder(parentPath);
+            const index = tracks.findIndex((track) => track.path === result.path);
+            if (index >= 0) playTrack(index);
+          }));
+        });
+      }
+
+      async function searchTracks(query) {
+        const trimmed = query.trim();
+        if (!trimmed) {
+          searchResults.hidden = true;
+          list.hidden = false;
+          showStatus('');
+          return;
+        }
+        showStatus('検索中…');
+        try {
+          const response = await fetch(`/api/search?q=${encodeURIComponent(trimmed)}`);
+          if (!response.ok) throw new Error('検索に失敗しました');
+          const data = await response.json();
+          renderSearchResults(data.results);
+          showStatus(`${data.results.length} 件の検索結果`);
+        } catch (error) {
+          showStatus(error.message, true);
+        }
+      }
+
+      function renderContents(data) {
+        list.replaceChildren();
+        tracks = data.tracks;
+        if (!data.directories.length && !data.tracks.length) {
+          const empty = document.createElement('div');
+          empty.className = 'empty';
+          empty.textContent = 'このフォルダには再生できる項目がありません。';
+          list.append(empty);
+          return;
+        }
+        data.directories.forEach((directory) => {
+          list.append(makeItem('📁', directory.name, 'フォルダ', () => loadFolder(directory.path), '›'));
+        });
+        data.tracks.forEach((track, index) => {
+          list.append(makeItem('🎵', track.name, track.extension, () => playTrack(index)));
+        });
+      }
+
+      async function loadFolder(path = '') {
+        showStatus('読み込み中…');
+        try {
+          const response = await fetch(`/api/browse?path=${encodeURIComponent(path)}`);
+          if (!response.ok) throw new Error('フォルダを読み込めませんでした');
+          const data = await response.json();
+          currentPath = data.path;
+          renderBreadcrumbs(currentPath);
+          renderContents(data);
+          showStatus(`${data.directories.length} フォルダ / ${data.tracks.length} 曲`);
+        } catch (error) {
+          showStatus(error.message, true);
+        }
+      }
+
+      function playTrack(index) {
+        if (!tracks[index]) return;
+        currentIndex = index;
+        const track = tracks[index];
+        audio.src = mediaUrl(track.path);
+        nowPlaying.textContent = track.name;
+        audio.play().catch(() => showStatus('再生するにはプレイヤーの再生ボタンを押してください。', true));
+      }
+
+      document.querySelector('#previous').addEventListener('click', () => {
+        if (currentIndex > 0) playTrack(currentIndex - 1);
+      });
+      document.querySelector('#next').addEventListener('click', () => {
+        if (currentIndex + 1 < tracks.length) playTrack(currentIndex + 1);
+      });
+      playPause.addEventListener('click', () => {
+        if (!audio.src && tracks.length) return playTrack(0);
+        if (audio.paused) audio.play(); else audio.pause();
+      });
+      audio.addEventListener('ended', () => {
+        if (currentIndex + 1 < tracks.length) playTrack(currentIndex + 1);
+      });
+      audio.addEventListener('play', () => { playPause.textContent = '⏸'; playPause.setAttribute('aria-label', '一時停止'); });
+      audio.addEventListener('pause', () => { playPause.textContent = '▶'; playPause.setAttribute('aria-label', '再生'); });
+      audio.addEventListener('loadedmetadata', () => {
+        seek.max = audio.duration || 0;
+        duration.textContent = formatTime(audio.duration);
+      });
+      audio.addEventListener('timeupdate', () => {
+        seek.value = audio.currentTime;
+        currentTime.textContent = formatTime(audio.currentTime);
+      });
+      seek.addEventListener('input', () => { audio.currentTime = Number(seek.value); });
+      volume.addEventListener('input', () => { audio.volume = Number(volume.value); });
+      document.querySelector('#search-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        searchTracks(searchInput.value);
+      });
+      searchInput.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => searchTracks(searchInput.value), 250);
+      });
+      document.querySelector('#clear-search').addEventListener('click', () => {
+        searchInput.value = '';
+        searchResults.hidden = true;
+        list.hidden = false;
+        showStatus('');
+        searchInput.focus();
+      });
+
+      loadFolder();
+    })();
+  </script>
+</body>
+</html>
